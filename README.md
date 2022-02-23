@@ -1,0 +1,2 @@
+# Spotify Playlist Comparison
+In this project I will create a model that will determine how similar two spotify playlists are to each other. For example if we have two playlist that both contain very similar types of genres of music such as pop. Then those two playlists are very similar. But if one playlist is pop while the other is mainly rock then they are not similar at all. 
