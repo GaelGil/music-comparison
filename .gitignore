@@ -1,0 +1,11 @@
+client_secrets.json
+.cache
+token.pickle
+*env
+*rand
+**/**__pycache__
+.pytest_cache
+.mp3
+*.mp3
+.DS_Store
+.ipynb_checkpoints/
