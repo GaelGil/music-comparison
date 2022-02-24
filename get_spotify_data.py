@@ -1,15 +1,8 @@
-import os
-import csv
 import re
-import numpy as np
-import pandas as pd
 import requests
+import pandas as pd
 import spotipy
 from spotipy.oauth2 import SpotifyOAuth
-from pathvalidate import sanitize_filename
-
-
-
 
 
 class GetSpotifyPlaylistData:
@@ -64,12 +57,14 @@ class GetSpotifyPlaylistData:
         return spotify_client
 
 
-    def get_spotify_playlists_ids(self, genres:list):
+    def get_featured_spotify_playlists_ids(self, genres:list):
         """
         Function to get playlists from spotify
-        This function will use the spotify api to search spotify for playlists. We will get
-        a bunch of data in return but all we need is the uri (ID). We will then append those
-        ID's to a list.
+        This function will use the spotify api to search spotify for playlists. We will use the
+        function `category_playlists` which will give us playlists that are a certain category.
+        This will return a bunch of data but all we need is the id of the playlist which we will
+        add to a list of ids and return. To read more about `category_playlists` here is a link:
+        https://developer.spotify.com/documentation/web-api/reference/#/operations/get-a-categories-playlists
 
         Parameters
         ----------
@@ -80,22 +75,22 @@ class GetSpotifyPlaylistData:
         -------
         list
         """
-        # We will search spotify for the genres listed in  the variable `genres`. This will
-        # return playlists ids
-        playlists_data = [self.spotify_client.search(q=i, type='playlist', limit=50) for i in genres]
+        # Search for featured spotify playlists with the genres we want
+        playlist_data = [self.spotify_client.category_playlists(category_id=i, country='US', limit=20, offset=0) for i in genres]
         # to hold playlists ids
-        playlists_ids = []
-        for i in range(len(playlists_data[0]['playlists']['items'])):
-            # add eacj playlist ids to the list
-            playlists_ids.append(playlists_data[0]['playlists']['items'][i]['uri'])
-        return playlists_ids
+        playlist_ids = []
+        for j in range(len(playlist_data)):
+            for i in range(len(playlist_data[j]['playlists']['items'])):
+                id_ = playlist_data[j]['playlists']['items'][i]['id']
+                playlist_ids.append(id_)
+        return playlist_ids
 
     def get_playlist_data(self, playlist_ids:list):
         """
         Function to get spotify playlist data. 
         We will use the spotify api to search for each playlist by its id. This will return some
         data such as tracks,name,artitsts,album. This data will be put into a list that we will
-        return. 
+        return that to use later.
 
         Parameters
         ----------
@@ -125,7 +120,6 @@ class GetSpotifyPlaylistData:
         -------
         None
         """
-        tracks_list = []
         data_dictionary = {'track_name': [], 'artist_name': [], 'preview': [], 'artist_genre': []}
         # for every playlists
         for i in range(len(playlists)):
@@ -139,10 +133,12 @@ class GetSpotifyPlaylistData:
                 preview = track['track']['preview_url']
                 artist_information = self.spotify_client.artist(artist_id)
                 artist_genre = artist_information['genres']
+                if song_name == None or artist_name == None or artist_genre == None:
+                    continue
                 # add to dataframe
                 data_dictionary['track_name'].append(song_name)
                 data_dictionary['artist_name'].append(artist_name)
-                data_dictionary['artist_genre'].append(artist_genre)
+                data_dictionary['artist_genre'].append(' '.join(artist_genre))
 
                 data_dictionary['preview'].append(f'./data/{song_name}')
                 if preview == None:
@@ -156,9 +152,10 @@ class GetSpotifyPlaylistData:
                 f.close()
         return data_dictionary
 
-    def set_data_as_pd(self, data):
+
+    def set_data_frame(self, data):
         """
-        Function to set variable `data_frame` as a dataframe
+        Function to set variable `data_frame` as a pandas dataframe
 
         Parameters
         ----------
@@ -172,10 +169,11 @@ class GetSpotifyPlaylistData:
         self.data_frame = pd.DataFrame(data=data)
         return 0
 
+
     def write_data_to_csv(self):
         """
         Function to write the dataframe to a csv file.
-        This function will save our dataframe into a csv file
+        This function will save our dataframe into a csv file.
 
         Parameters
         ----------
@@ -188,67 +186,9 @@ class GetSpotifyPlaylistData:
         self.data_frame.to_csv('data.csv', index=False)
         return 0
 
-# f = open("pop_data.csv", "x")
-
-
 sp = GetSpotifyPlaylistData()
-# tracks = sp.spotify_client.playlist(playlist_id='37i9dQZF1DWZQaaqNMbbXa')
-# ids = sp.get_spotify_playlists_ids(['pop', 'jazz'])
-# playlist_data = sp.get_playlist_data(ids)
-# data = sp.get_track_data(playlist_data)
-# sp.set_data_as_pd(data)
-# sp.write_data_to_csv()
-# featured_playlist = sp.spotify_client.featured_playlists(locale='en-us_US', country='US', timestamp=None, limit=50, offset=0)
-searched_playlists = sp.spotify_client.search(q='pop', type='playlist', limit=10, market='US')
-# print(searched_playlists)
-
-# print(sp.spotify_client.available_markets())
-
-print(sp.spotify_client.categories(country='US', locale='en-us_US', limit=50, offset=0)['categories']['items'][16])
-# print(data)
-# print(data.keys())
-# print(data['playlists'])
-# print(data['playlists']['items'])
-# print(sp.spotifpyy_client.playlist(playlist_id='37i9dQZF1DXafb0IuPwJy'))
-# print(tracks)
-# print(type(tracks))
-# tracks_list = []
-# for track in tracks['tracks']['items']:
-#     if track['track']:
-#         popularity = track['track']['popularity'] # get popularity value (str)
-#         uri = track['track']['uri'] # get uri for the track (str)
-#         name = track['track']['artists'][0]['name'] # get name of the track
-#         tracks_list.append(uri)
-
-
-# for i in tracks_list:
-#     # song information
-#     song = sp.spotify_client.track(i)
-#     # artist of song (id)
-#     artist = song['artists'][0]['id']
-#     # artist information
-#     artist_information = sp.spotify_client.artist(artist)
-#     # artist genre
-#     artist_genre = artist_information['genres']
-#     # artist name
-#     artist_name = song['artists'][0]['name']
-#     # song name
-#     song_name = song['name']
-#     preview = song['preview_url']
-#     print(f'Artist Genre: {artist_genre}')
-#     print(f'Artist Name: {artist_name}')
-#     print(f'Song Name: {song_name}')
-#     print(f'Preview: {preview}')
-#     doc = requests.get(preview)
-#     if preview == None or doc == None or doc.content == None:
-#         pass
-
-#     f = open(f'./data/{song_name}.mp3', 'wb')
-#     f.write(doc.content)
-#     f.close()
-#     print()
-
-
-
-
-
+ids = sp.get_featured_spotify_playlists_ids(['pop', 'rock'])
+playlist_data = sp.get_playlist_data(ids)
+data = sp.get_track_data(playlist_data)
+sp.set_data_frame(data)
+sp.write_data_to_csv()
