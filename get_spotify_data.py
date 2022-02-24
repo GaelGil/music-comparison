@@ -133,15 +133,15 @@ class GetSpotifyPlaylistData:
                 preview = track['track']['preview_url']
                 artist_information = self.spotify_client.artist(artist_id)
                 artist_genre = artist_information['genres']
-                if song_name == None or artist_name == None or artist_genre == None:
+                if not song_name or not artist_name or not artist_genre:
                     continue
-                # add to dataframe
+
                 data_dictionary['track_name'].append(song_name)
                 data_dictionary['artist_name'].append(artist_name)
                 data_dictionary['artist_genre'].append(' '.join(artist_genre))
 
                 data_dictionary['preview'].append(f'./data/{song_name}')
-                if preview == None:
+                if not preview:
                     continue
                 doc = requests.get(preview)
                 song_name = re.sub(r'[\\/*?:"<>|]',"", song_name)
