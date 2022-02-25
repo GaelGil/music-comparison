@@ -10,7 +10,8 @@ src = './dua_lipa.mp3'
 dst = 'dua_lipa.wav'
 soud = AudioSegment.from_mp3(src)
 soud.export(dst, format='wav')
-# path = './data'
+path = './data'
+
 # directory = os.fsencode(path)
     
 # for file in os.listdir(directory):
