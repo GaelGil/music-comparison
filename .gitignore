@@ -10,3 +10,6 @@ token.pickle
 .DS_Store
 .ipynb_checkpoints/
 *.wav
+*other_data
+*random
+*wav_data
