@@ -1,4 +1,5 @@
 import re
+from tkinter.messagebox import NO
 import requests
 import pandas as pd
 import spotipy
@@ -57,13 +58,12 @@ class GetSpotifyPlaylistData:
         return spotify_client
 
 
-    def get_featured_spotify_playlists_ids(self, genres:list):
+    def get_spotify_playlists(self, genres:list, limit:int, type=None):
         """
         Function to get playlists from spotify
         This function will use the spotify api to search spotify for playlists. We will use the
-        function `category_playlists` which will give us playlists that are a certain category.
-        This will return a bunch of data but all we need is the id of the playlist which we will
-        add to a list of ids and return. To read more about `category_playlists` here is a link:
+        function `category_playlists` or 'search' which will give us playlists data. To read more
+        about `category_playlists`or `search` functions here is a link:
         https://developer.spotify.com/documentation/web-api/reference/#/operations/get-a-categories-playlists
 
         Parameters
@@ -71,19 +71,66 @@ class GetSpotifyPlaylistData:
         genres : list
             A list of genres to search spotify playlits for
 
+        limist : int
+            A integer that can be used to limit how many items we get in our spotify reqest
+
+        type : list
+            A string to differentiate what type of playlist data we want from spotify
+
         Returns
         -------
         list
         """
-        # Search for featured spotify playlists with the genres we want
-        playlist_data = [self.spotify_client.category_playlists(category_id=i, country='US', limit=20, offset=0) for i in genres]
-        # to hold playlists ids
+        # Get spotify playlists by searching or getting featured playlists
+        if type == 'search':
+            # if we only want searched playlists 
+            playlist_data = [self.spotify_client.search(q=i, limit=limit, offset=0, type='playlist', market='US') for i in genres]
+        if type == 'featured':
+            # if we only want featured playlists
+            playlist_data = [self.spotify_client.category_playlists(category_id=i, country='US', limit=limit, offset=0) for i in genres]
+        if not type:
+            # if we want both
+            featured_data = [self.spotify_client.category_playlists(category_id=i, country='US', limit=limit, offset=0) for i in genres]
+            search_data = [self.spotify_client.search(q=i, limit=limit, offset=0, type='playlist', market='US') for i in genres]
+            playlist_data = featured_data + search_data
+        return playlist_data
+
+
+    def get_spotify_playlists_ids(self, playlist_data:list, genres:list):
+        """
+        Function to get spotify playlist ids.
+        This function will extract the spotify playlist ids from the data we recived in `get_spotify_playlists`.
+        We get the ids so that we can search it up later to get all the data that is inside the playlist. We
+        need to do this because in our initial search using `category_playlists` and `search` all the data we
+        need is not included. We iterate thorugh `playlist_data` and look for the id of the playlist. Once we
+        have it we add it to a list `playlist_ids` which we then return.
+
+        Parameters
+        ----------
+        playlist_data : list
+            A list containing spotify playlists data
+
+        Returns
+        -------
+        list
+        """
         playlist_ids = []
         for j in range(len(playlist_data)):
+            # contains where we got out data from ie what general genre
+            request_sent = playlist_data[j]['playlists']['next']
+            data_genre = 0
+            # When we search things we want to know what we searched and what data we got from that.
+            # For example if we searched 'pop' then we want to know which playlists came from that search
+            # This here will help us find it
+            for i in genres:
+                if i in request_sent:
+                    data_genre = i
+            # get the ID and append to a list along with the genre
             for i in range(len(playlist_data[j]['playlists']['items'])):
                 id_ = playlist_data[j]['playlists']['items'][i]['id']
-                playlist_ids.append(id_)
+                playlist_ids.append([id_, data_genre])
         return playlist_ids
+
 
     def get_playlist_data(self, playlist_ids:list):
         """
@@ -101,10 +148,48 @@ class GetSpotifyPlaylistData:
         -------
         list
         """
-        # get playlist data
-        playlists_data  = [self.spotify_client.playlist(playlist_id=i) for i in playlist_ids]
-        return playlists_data
+        playlist_data = []
+        for i in range(len(playlist_ids)):
+            playlist_data.append([self.spotify_client.playlist(playlist_id=playlist_ids[i][0]), playlist_ids[i][1]])
+        return playlist_data
 
+    def get_data(self, playlist:list):
+        """
+        Function to get data from a spotify track.
+        This function will
+
+        Parameters
+        ----------
+        playlists : str
+            A list of spotify playlist data
+
+        Returns
+        -------
+        None
+        """
+        data = {'playlist_id': [], 'playlist': [], 'genre': [], 'artist_genre': []}
+        for i in range(len(playlist)):
+            tracks = playlist[i][0]
+            genre = playlist[i][1]
+            id_ = playlist[i][0]['id']
+            current_playlist = []
+            for track in tracks['tracks']['items']:
+                song_name = track['track']['name']
+                artist_name = track['track']['artists'][0]['name']
+                song_and_artist  = f'{song_name} {artist_name}'
+                print(song_and_artist)
+                current_playlist.append(song_and_artist)
+                # if not song_name or not artist_name:
+                #     continue
+                
+                data['playlist_id'].append(id_)
+                data['playlist'].append(' '.join(current_playlist))
+                data['genre'].append(genre)
+        print(len(data['playlist']))
+        print(len(data['playlist_id']))
+        print(len(data['genre']))
+
+        return data
 
     def get_track_data(self, playlists:list):
         """
@@ -123,7 +208,8 @@ class GetSpotifyPlaylistData:
         data_dictionary = {'track_name': [], 'artist_name': [], 'preview': [], 'artist_genre': []}
         # for every playlists
         for i in range(len(playlists)):
-            tracks = playlists[i]
+            tracks = playlists[i][0]
+            genre = playlists[i][1]
             # for every track in every playlist
             for track in tracks['tracks']['items']:
                 # select the data we need
@@ -133,7 +219,7 @@ class GetSpotifyPlaylistData:
                 preview = track['track']['preview_url']
                 artist_information = self.spotify_client.artist(artist_id)
                 artist_genre = artist_information['genres']
-                if not song_name or not artist_name or not artist_genre:
+                if not song_name or not artist_name or not artist_genre or not preview:
                     continue
 
                 data_dictionary['track_name'].append(song_name)
@@ -141,8 +227,7 @@ class GetSpotifyPlaylistData:
                 data_dictionary['artist_genre'].append(' '.join(artist_genre))
 
                 data_dictionary['preview'].append(f'./other_data/{song_name}')
-                if not preview:
-                    continue
+
                 doc = requests.get(preview)
                 song_name = re.sub(r'[\\/*?:"<>|]',"", song_name)
                 if doc == None or doc.content == None:
@@ -167,6 +252,9 @@ class GetSpotifyPlaylistData:
         None
         """
         self.data_frame = pd.DataFrame(data=data)
+        # self.data_frame = pd.DataFrame.from_dict(data, orient='index')
+
+        print(self.data_frame)
         return 0
 
 
@@ -183,32 +271,37 @@ class GetSpotifyPlaylistData:
         -------
         None
         """
-        self.data_frame.to_csv('other_dataset.csv', index=False)
+        self.data_frame.to_csv('test.csv', index=False)
         return 0
 
 sp = GetSpotifyPlaylistData()
-# ids = sp.get_featured_spotify_playlists_ids(['pop', 'rock'])
-ids = ['008G1BbvK1NQvbAV8MHvDz',
-'68PjCnmfHOdWHNt2szkwiD',
-'4A6gaLrq8RU5uRsUWFNnBZ',
-'3PH11VjYTf55GzJ5kzeoOY',
-'2eVuLoCP74cegyax11zgEf',
-'6EZcQiAcgBb5CQaVMQVdVS',
-'3QTkC28jlrBnbulDEBhldH',
-'5SxaM0HGm9nfYfSxcbh4cG',
-'2CuHEVcJRiBfFYlFscPX7c',
-'6BunFlKoYIMFummSVTcWkQ',
-'3Da3yokTjSupbEd7QSE3Kg',
-'5qNHuEyfs4QHR8NI4oNaxE',
-'2VCUG2HWlEeq1zvUvRkN80',
-'7zVuuDwQ816JxMimuTGFjG',
-'6gUFdcGzKAHyDXY9TKC6cP',
-'4i4HEyLcpaSnMdI6XikFsY',
-'5e1bpazQUEHijFhcJobkAp',
-'2uYCFYN7H4JUOEI7N4dLHN',
-'3za8xUPaO5ng9AC7rpbMNB',
-'6TeyryiZ2UEf3CbLXyztFA']
+data = sp.get_spotify_playlists(genres=['pop', 'rock'], limit=10)
+ids = sp.get_spotify_playlists_ids(data, genres=['pop', 'rock'])
 playlist_data = sp.get_playlist_data(ids)
-data = sp.get_track_data(playlist_data)
-sp.set_data_frame(data)
+to_csv = sp.get_data(playlist_data)
+sp.set_data_frame(to_csv)
 sp.write_data_to_csv()
+# ids = ['008G1BbvK1NQvbAV8MHvDz',
+# '68PjCnmfHOdWHNt2szkwiD',
+# '4A6gaLrq8RU5uRsUWFNnBZ',
+# '3PH11VjYTf55GzJ5kzeoOY',
+# '2eVuLoCP74cegyax11zgEf',
+# '6EZcQiAcgBb5CQaVMQVdVS',
+# '3QTkC28jlrBnbulDEBhldH',
+# '5SxaM0HGm9nfYfSxcbh4cG',
+# '2CuHEVcJRiBfFYlFscPX7c',
+# '6BunFlKoYIMFummSVTcWkQ',
+# '3Da3yokTjSupbEd7QSE3Kg',
+# '5qNHuEyfs4QHR8NI4oNaxE',
+# '2VCUG2HWlEeq1zvUvRkN80',
+# '7zVuuDwQ816JxMimuTGFjG',
+# '6gUFdcGzKAHyDXY9TKC6cP',
+# '4i4HEyLcpaSnMdI6XikFsY',
+# '5e1bpazQUEHijFhcJobkAp',
+# '2uYCFYN7H4JUOEI7N4dLHN',
+# '3za8xUPaO5ng9AC7rpbMNB',
+# '6TeyryiZ2UEf3CbLXyztFA']
+# playlist_data = sp.get_playlist_data(ids)
+# data = sp.get_track_data(playlist_data)
+# sp.set_data_frame(data)
+# sp.write_data_to_csv()
