@@ -11,18 +11,24 @@ class GetSpotifyPlaylistData:
     A class used to communicate with the Spotify api.
     Attributes
     ----------
-    popular_tracks : list
-        A list of popular tracks on spotify
+    data_frame : list
+        A pandas dataframe
     Methods
     -------
-    get_spotify_playlists(self, query:str)
-        Searches spotify for playlists
-    get_popular_songs(self, spotify_playlist_id:str):
-        Gets most popular songs from spotify playlist
-    create_spotify_playlist(self, playlist_name:str, for_user:str)
-        Creates a new spotify playlists using a name and a users name
-    add_tracks_to_playlist(self, playlist_id:str)
-        Adds song to a spotify playlists
+    get_spotify_playlist(self, genres:list, limit:int, type:str)
+        Get spotify featured playlists or not featured 
+
+    get_spotify_playlist_ids(self, playlist_data:list, genres:list):
+        Get the ID's of spotify playlists with the spotify api
+
+    get_playlist_data(self, playlist_ids:list)
+        Get the data of a spotify playlist using the spotify api
+
+    add_set_data_frame(self)
+        Set the class variable data_frame
+    write_data_to_csv(self)
+
+        Write the class varible data_frame to a csv file
     """
 
     def __init__(self):
@@ -96,7 +102,7 @@ class GetSpotifyPlaylistData:
         return playlist_data
 
 
-    def get_spotify_playlists_ids(self, playlist_data:list, genres:list):
+    def get_spotify_playlist_ids(self, playlist_data:list, genres:list):
         """
         Function to get spotify playlist ids.
         This function will extract the spotify playlist ids from the data we recived in `get_spotify_playlists`.
@@ -153,6 +159,7 @@ class GetSpotifyPlaylistData:
             playlist_data.append([self.spotify_client.playlist(playlist_id=playlist_ids[i][0]), playlist_ids[i][1]])
         return playlist_data
 
+
     def get_data(self, playlist:list):
         """
         Function to get data from a spotify track.
@@ -167,7 +174,8 @@ class GetSpotifyPlaylistData:
         -------
         None
         """
-        data = {'playlist_id': [], 'playlist': [], 'genre': [], 'artist_genre': []}
+        data = {'playlist_id': [], 'playlist': [], 'genre': []}
+        data_list = []
         for i in range(len(playlist)):
             tracks = playlist[i][0]
             genre = playlist[i][1]
@@ -177,17 +185,12 @@ class GetSpotifyPlaylistData:
                 song_name = track['track']['name']
                 artist_name = track['track']['artists'][0]['name']
                 song_and_artist  = f'{song_name} {artist_name}'
-                print(song_and_artist)
                 current_playlist.append(song_and_artist)
-                # if not song_name or not artist_name:
-                #     continue
-                
-                data['playlist_id'].append(id_)
-                data['playlist'].append(' '.join(current_playlist))
-                data['genre'].append(genre)
-        print(len(data['playlist']))
-        print(len(data['playlist_id']))
-        print(len(data['genre']))
+            data_list.append([id_, current_playlist, genre])
+        for i in range(len(data_list)):
+            data['playlist_id'].append(data_list[i][0])
+            data['playlist'].append(data_list[i][1])
+            data['genre'].append(data_list[i][2])
 
         return data
 
@@ -252,9 +255,6 @@ class GetSpotifyPlaylistData:
         None
         """
         self.data_frame = pd.DataFrame(data=data)
-        # self.data_frame = pd.DataFrame.from_dict(data, orient='index')
-
-        print(self.data_frame)
         return 0
 
 
@@ -276,7 +276,7 @@ class GetSpotifyPlaylistData:
 
 sp = GetSpotifyPlaylistData()
 data = sp.get_spotify_playlists(genres=['pop', 'rock'], limit=10)
-ids = sp.get_spotify_playlists_ids(data, genres=['pop', 'rock'])
+ids = sp.get_spotify_playlist_ids(data, genres=['pop', 'rock'])
 playlist_data = sp.get_playlist_data(ids)
 to_csv = sp.get_data(playlist_data)
 sp.set_data_frame(to_csv)
