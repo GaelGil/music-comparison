@@ -1,4 +1,5 @@
 import re
+from tkinter import W
 from tkinter.messagebox import NO
 import requests
 import pandas as pd
@@ -182,11 +183,16 @@ class GetSpotifyPlaylistData:
             id_ = playlist[i][0]['id']
             current_playlist = []
             for track in tracks['tracks']['items']:
-                song_name = track['track']['name']
-                artist_name = track['track']['artists'][0]['name']
-                song_and_artist  = f'{song_name} {artist_name}'
-                current_playlist.append(song_and_artist)
+                if track['track']:
+                    song_name = track['track']['name']
+                    artist_name = track['track']['artists'][0]['name']
+                    song_and_artist  = f'{song_name} {artist_name}'
+                    current_playlist.append(song_and_artist)
+
+                else:
+                    continue
             data_list.append([id_, current_playlist, genre])
+
         for i in range(len(data_list)):
             data['playlist_id'].append(data_list[i][0])
             data['playlist'].append(data_list[i][1])
@@ -258,7 +264,7 @@ class GetSpotifyPlaylistData:
         return 0
 
 
-    def write_data_to_csv(self):
+    def write_data_to_csv(self, name:str):
         """
         Function to write the dataframe to a csv file.
         This function will save our dataframe into a csv file.
@@ -271,16 +277,17 @@ class GetSpotifyPlaylistData:
         -------
         None
         """
-        self.data_frame.to_csv('test.csv', index=False)
+        self.data_frame.to_csv(name, index=False)
         return 0
 
 sp = GetSpotifyPlaylistData()
-data = sp.get_spotify_playlists(genres=['pop', 'rock'], limit=10)
+data = sp.get_spotify_playlists(genres=['pop', 'rock'], limit=50)
 ids = sp.get_spotify_playlist_ids(data, genres=['pop', 'rock'])
 playlist_data = sp.get_playlist_data(ids)
 to_csv = sp.get_data(playlist_data)
 sp.set_data_frame(to_csv)
-sp.write_data_to_csv()
+sp.write_data_to_csv('playlist_data.csv')
+
 # ids = ['008G1BbvK1NQvbAV8MHvDz',
 # '68PjCnmfHOdWHNt2szkwiD',
 # '4A6gaLrq8RU5uRsUWFNnBZ',
