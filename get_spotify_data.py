@@ -1,6 +1,4 @@
 import re
-from tkinter import W
-from tkinter.messagebox import NO
 import requests
 import pandas as pd
 import spotipy
@@ -27,8 +25,8 @@ class GetSpotifyPlaylistData:
 
     add_set_data_frame(self)
         Set the class variable data_frame
-    write_data_to_csv(self)
 
+    write_data_to_csv(self)
         Write the class varible data_frame to a csv file
     """
 
@@ -120,6 +118,7 @@ class GetSpotifyPlaylistData:
         Returns
         -------
         list
+            A list of spotify playlist ids
         """
         playlist_ids = []
         for j in range(len(playlist_data)):
@@ -154,6 +153,8 @@ class GetSpotifyPlaylistData:
         Returns
         -------
         list
+            a list of dictionaries where every item in the list is a dictionary containing
+            data to a single playlist.
         """
         playlist_data = []
         for i in range(len(playlist_ids)):
@@ -241,10 +242,28 @@ class GetSpotifyPlaylistData:
                 song_name = re.sub(r'[\\/*?:"<>|]',"", song_name)
                 if doc == None or doc.content == None:
                     continue
-                f = open(f'./other_data/{song_name}.wav', 'wb')
+                f = open(f'./other_data/{song_name}.mp3', 'wb')
                 f.write(doc.content)
                 f.close()
         return data_dictionary
+
+
+    def get_track_data(self, playlists:list, wav=True):
+        playlist_data = {'playlist_id': [], 'playlist': [], 'genre': []}
+        data_list = []
+        wav_data = {'song': [], 'path_to_wav': [], 'genre': []}
+        # for every playlists
+        for i in range(len(playlists)):
+            tracks = playlists[i][0]
+            genre = playlists[i][1]
+            # for every track in every playlist
+            for track in tracks['tracks']['items']:
+                # select the data we need
+                song_name = track['track']['name']
+                artist_name = track['track']['artists'][0]['name']
+        if not wav:
+            return playlist_data
+        return wav_data
 
 
     def set_data_frame(self, data):
@@ -312,3 +331,8 @@ sp.write_data_to_csv('playlist_data.csv')
 # data = sp.get_track_data(playlist_data)
 # sp.set_data_frame(data)
 # sp.write_data_to_csv()
+
+
+
+# TODO: Get spotify playlist data from featured and ids above.
+# TODO: Get data in this format {song: "song_name", path_to_wav: 'path_to_wav': 'path', 'genre': 'where in the featured playlists was this (rock, pop)'}
