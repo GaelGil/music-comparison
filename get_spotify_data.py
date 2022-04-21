@@ -85,6 +85,8 @@ class GetSpotifyPlaylistData:
         Returns
         -------
         list
+            A list of dictionaries where every item in the list is a dictionary containing
+            data to a single playlist.
         """
         # Get spotify playlists by searching or getting featured playlists
         if type == 'search':
@@ -118,7 +120,7 @@ class GetSpotifyPlaylistData:
         Returns
         -------
         list
-            A list of spotify playlist ids
+            A list of spotify playlist ids and their genres
         """
         playlist_ids = []
         for j in range(len(playlist_data)):
@@ -248,7 +250,7 @@ class GetSpotifyPlaylistData:
         return data_dictionary
 
 
-    def get_track_data(self, playlists:list, wav=True):
+    def extract_data(self, playlists:list, wav=True):
         playlist_data = {'playlist_id': [], 'playlist': [], 'genre': []}
         data_list = []
         wav_data = {'song': [], 'path_to_wav': [], 'genre': []}
@@ -256,11 +258,15 @@ class GetSpotifyPlaylistData:
         for i in range(len(playlists)):
             tracks = playlists[i][0]
             genre = playlists[i][1]
+            id_ = playlists[i][0]['id']
             # for every track in every playlist
             for track in tracks['tracks']['items']:
-                # select the data we need
-                song_name = track['track']['name']
-                artist_name = track['track']['artists'][0]['name']
+                if track['track']:
+                    # select the data we need
+                    song_name = track['track']['name']
+                    artist_name = track['track']['artists'][0]['name']
+                else:
+                    continue
         if not wav:
             return playlist_data
         return wav_data
