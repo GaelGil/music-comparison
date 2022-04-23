@@ -164,96 +164,72 @@ class GetSpotifyPlaylistData:
         return playlist_data
 
 
-    def get_data(self, playlist:list):
+    def format_data(self, track, wav=True):
         """
-        Function to get data from a spotify track.
-        This function will
-
         Parameters
         ----------
-        playlists : str
-            A list of spotify playlist data
+        track : dict
+            A dictionary
+        
+        wav: bool
+            A bool
 
         Returns
         -------
-        None
         """
-        data = {'playlist_id': [], 'playlist': [], 'genre': []}
-        data_list = []
-        for i in range(len(playlist)):
-            tracks = playlist[i][0]
-            genre = playlist[i][1]
-            id_ = playlist[i][0]['id']
+        song = track['track']['name']
+        artist = track['track']['artists'][0]['name']
+        artist_id = track['track']['artists'][0]['id']
+        preview_url = track['track']['preview_url']
+        artist_data = self.spotify_client.artist(artist_id=artist_id)
+        artist_genre = artist_data['genres']
+        if wav:            
+            if not preview_url:
+                return
+            else:
+                doc = requests.get(preview_url) 
+                song_clean = re.sub(r'[\\/*?:"<>|]',"", song) # clean the song name
+                path_to_wav = f'./audio_data/mp3_data/{song_clean}.mp3' # create a path to the song
+                if not doc or not doc.content:
+                    return False
+                f = open(path_to_wav, 'wb') 
+                f.write(doc.content) # write the content of doc to a file
+                f.close()                
+                return [song, path_to_wav, artist, ''.join(artist_genre)]
+        if not wav:
             current_playlist = []
-            for track in tracks['tracks']['items']:
-                if track['track']:
-                    song_name = track['track']['name']
-                    artist_name = track['track']['artists'][0]['name']
-                    song_and_artist  = f'{song_name} {artist_name}'
-                    current_playlist.append(song_and_artist)
+            song_and_artist  = f'{song} {artist} {artist_genre}'
+            current_playlist.append(song_and_artist)
+            return current_playlist, artist_genre
 
-                else:
-                    continue
-            data_list.append([id_, current_playlist, genre])
 
-        for i in range(len(data_list)):
-            data['playlist_id'].append(data_list[i][0])
-            data['playlist'].append(data_list[i][1])
-            data['genre'].append(data_list[i][2])
-
-        return data
-
-    def get_track_data(self, playlists:list):
-        """
-        Function to get data from a spotify track.
-        This function will
-
-        Parameters
-        ----------
-        playlists : str
-            A list of spotify playlist data
-
-        Returns
-        -------
-        None
-        """
-        data_dictionary = {'track_name': [], 'artist_name': [], 'preview': [], 'artist_genre': []}
-        # for every playlists
-        for i in range(len(playlists)):
-            tracks = playlists[i][0]
-            genre = playlists[i][1]
-            # for every track in every playlist
-            for track in tracks['tracks']['items']:
-                # select the data we need
-                song_name = track['track']['name']
-                artist_name = track['track']['artists'][0]['name']
-                artist_id = track['track']['artists'][0]['id']
-                preview = track['track']['preview_url']
-                artist_information = self.spotify_client.artist(artist_id)
-                artist_genre = artist_information['genres']
-                if not song_name or not artist_name or not artist_genre or not preview:
-                    continue
-
-                data_dictionary['track_name'].append(song_name)
-                data_dictionary['artist_name'].append(artist_name)
-                data_dictionary['artist_genre'].append(' '.join(artist_genre))
-
-                data_dictionary['preview'].append(f'./other_data/{song_name}')
-
-                doc = requests.get(preview)
-                song_name = re.sub(r'[\\/*?:"<>|]',"", song_name)
-                if doc == None or doc.content == None:
-                    continue
-                f = open(f'./other_data/{song_name}.mp3', 'wb')
-                f.write(doc.content)
-                f.close()
-        return data_dictionary
-
+        
+            
 
     def extract_data(self, playlists:list, wav=True):
-        playlist_data = {'playlist_id': [], 'playlist': [], 'genre': []}
+        """
+        Function to get playlists from spotify
+        This function will use the spotify api to search spotify for playlists. We will use the
+        function `category_playlists` or 'search' which will give us playlists data. To read more
+        about `category_playlists`or `search` functions here is a link:
+        https://developer.spotify.com/documentation/web-api/reference/#/operations/get-a-categories-playlists
+
+        Parameters
+        ----------
+        playlists : list
+            A list of
+
+        wav : bool
+            A bool
+
+        Returns
+        -------
+        dict
+            A dictionary
+        """
+        playlist_data = {'playlist_id': [], 'playlist': [], 'genre': [], 'artist_genre': [], 'genre': []}
         data_list = []
-        wav_data = {'song': [], 'path_to_wav': [], 'genre': []}
+        wav_data = {'song': [], 'path_to_wav': [], 'artist': [], 'artist_genre': [], 'genre': []}
         # for every playlists
         for i in range(len(playlists)):
             tracks = playlists[i][0]
@@ -261,12 +237,29 @@ class GetSpotifyPlaylistData:
             id_ = playlists[i][0]['id']
             # for every track in every playlist
             for track in tracks['tracks']['items']:
+                # if we have a track
                 if track['track']:
-                    # select the data we need
-                    song_name = track['track']['name']
-                    artist_name = track['track']['artists'][0]['name']
-                else:
-                    continue
+                    # if we want wav data
+                    if wav:
+                        data = self.format_data(track, wav)
+                        if data:
+                            wav_data['song'].append(data[0])
+                            wav_data['path_to_wav'].append(data[1])
+                            wav_data['artist'].append(data[2])
+                            wav_data['artist_genre'].append(data[3])
+                            wav_data['genre'].append(genre)
+                        else:    
+                            continue
+                # if we want playlists data
+                if not wav:
+                    current_playlist, artist_genre = self.format_data(track, False)
+                    data_list.append([id_, current_playlist, artist_genre, genre])
+        for i in range(len(data_list)):
+            playlist_data['playlist_id'].append(data_list[i][0])
+            playlist_data['playlist'].append(data_list[i][1])
+            playlist_data['artist_genre'].append(data_list[i][2])
+            playlist_data['genre'].append(data_list[i][3])
+
         if not wav:
             return playlist_data
         return wav_data
@@ -306,12 +299,18 @@ class GetSpotifyPlaylistData:
         return 0
 
 sp = GetSpotifyPlaylistData()
-data = sp.get_spotify_playlists(genres=['pop', 'rock'], limit=50)
+# get spotify playlists
+data = sp.get_spotify_playlists(genres=['pop', 'rock'], limit=10)
+# get a ids for all the playlists we have
 ids = sp.get_spotify_playlist_ids(data, genres=['pop', 'rock'])
+# get the data that we go back from searching a playlist by id
 playlist_data = sp.get_playlist_data(ids)
-to_csv = sp.get_data(playlist_data)
+# extract the data in a format we want
+to_csv = sp.extract_data(playlist_data)
+# set our class dataframe equal to our data
 sp.set_data_frame(to_csv)
-sp.write_data_to_csv('playlist_data.csv')
+# write the dataframe to csv
+sp.write_data_to_csv('./audio_data/csv/song_wav_data.csv')
 
 # ids = ['008G1BbvK1NQvbAV8MHvDz',
 # '68PjCnmfHOdWHNt2szkwiD',
@@ -338,7 +337,3 @@ sp.write_data_to_csv('playlist_data.csv')
 # sp.set_data_frame(data)
 # sp.write_data_to_csv()
 
-
-
-# TODO: Get spotify playlist data from featured and ids above.
-# TODO: Get data in this format {song: "song_name", path_to_wav: 'path_to_wav': 'path', 'genre': 'where in the featured playlists was this (rock, pop)'}
