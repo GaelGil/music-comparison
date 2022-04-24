@@ -1,25 +1,18 @@
-from email.mime import audio
 import os
 from pydub import AudioSegment
-# import sys
-# sys.path.append('/path/to/ffmpeg')
 
-# src = './data/Ghost.mp3'
-src = './dua_lipa.mp3'
+path = '../audio_data/mp3_data'
 
-dst = 'dua_lipa.wav'
-soud = AudioSegment.from_mp3(src)
-soud.export(dst, format='wav')
-path = './data'
-
-# directory = os.fsencode(path)
+directory = os.fsencode(path)
     
-# for file in os.listdir(directory):
-#      filename = os.fsdecode(file)
-#      if filename.endswith(".mp3"): 
-#         #  print(os.path.join(directory, filename))
-#          src = (f'./new_data/{filename}')
-#          dst = f'./new_data/{filename}'
-#          print(src)
-#          sound = AudioSegment.from_mp3(src)
-#          sound.export(dst, format='wav')
+for file in os.listdir(directory):
+     filename = os.fsdecode(file)
+     if filename.endswith(".mp3"): 
+        #  print(os.path.join(directory, filename))
+        # print(filename)
+        src = f'{path}/{filename}'
+        filename = filename[:-4]
+        dst = f'../audio_data/wav_data/{filename}.wav'
+        print(src)
+        sound = AudioSegment.from_mp3(src)
+        sound.export(dst, format='wav')
