@@ -11,6 +11,6 @@ token.pickle
 .ipynb_checkpoints/
 *.wav
 *other_data
-*.random
+*random
 *wav_data
 *mp3_data
