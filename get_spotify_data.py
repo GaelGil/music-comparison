@@ -189,13 +189,13 @@ class GetSpotifyPlaylistData:
             else:
                 doc = requests.get(preview_url) 
                 song_clean = re.sub(r'[\\/*?:"<>|]',"", song) # clean the song name
-                path_to_wav = f'./audio_data/mp3_data/{song_clean}.mp3' # create a path to the song
+                path_to_wav = f'./audio_data/classical_mp3/{song_clean.lower()}.mp3' # create a path to the song
                 if not doc or not doc.content:
                     return False
                 f = open(path_to_wav, 'wb') 
                 f.write(doc.content) # write the content of doc to a file
                 f.close()                
-                return [song, path_to_wav, artist, ''.join(artist_genre)]
+                return [song.lower(), path_to_wav, artist, ''.join(artist_genre)]
         if not wav:
             current_playlist = []
             song_and_artist  = f'{song} {artist} {artist_genre}'
@@ -298,19 +298,39 @@ class GetSpotifyPlaylistData:
         self.data_frame.to_csv(name, index=False)
         return 0
 
+metal_playlists = [
+['37i9dQZF1DX2LTcinqsO68', 'metal'],
+['37i9dQZF1DWWOaP4H0w5b0', 'metal'],
+['37i9dQZF1DX9qNs32fujYe', 'metal'],
+['37i9dQZF1DX08jcQJXDnEQ', 'metal'],
+['37i9dQZF1DWXNFSTtym834', 'metal'],
+['37i9dQZF1DX68H8ZujdnN7', 'metal']]
+
+classical_playlists = [
+['37i9dQZF1DWVFeEut75IAL', 'classical'],
+['37i9dQZF1DWWEJlAGA9gs0', 'classical'],
+['37i9dQZF1DWUqIzZNMSCv3', 'classical'],
+['37i9dQZF1DX561TxkFttR4', 'classical'],
+['37i9dQZF1DWXjj6kdiviS0', 'classical'],
+['37i9dQZF1DX1jDTenPbqLo', 'classical']]
+
+
 sp = GetSpotifyPlaylistData()
 # get spotify playlists
-data = sp.get_spotify_playlists(genres=['punk', 'jazz'], limit=10, type='featured')
+# data = sp.get_spotify_playlists(genres=['punk', 'jazz'], limit=10, type='featured')
 # get a ids for all the playlists we have
-ids = sp.get_spotify_playlist_ids(data, genres=['punk', 'jazz'])
+# ids = sp.get_spotify_playlist_ids(data, genres=['punk', 'jazz'])
 # get the data that we go back from searching a playlist by id
-playlist_data = sp.get_playlist_data(ids)
+playlist_data = sp.get_playlist_data(classical_playlists)
 # extract the data in a format we want
 to_csv = sp.extract_data(playlist_data)
 # set our class dataframe equal to our data
 sp.set_data_frame(to_csv)
 # write the dataframe to csv
-sp.write_data_to_csv('./audio_data/csv/track_data.csv')
+sp.write_data_to_csv('./audio_data/csv/classical.csv')
+
+
+
 
 # ids = ['008G1BbvK1NQvbAV8MHvDz',
 # '68PjCnmfHOdWHNt2szkwiD',

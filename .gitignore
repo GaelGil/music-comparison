@@ -9,8 +9,10 @@ token.pickle
 *.mp3
 .DS_Store
 .ipynb_checkpoints/
-*.wav
+.wav
 *other_data
 *random
 *wav_data
 *mp3_data
+*classical_mp3
+*metal_mp3
